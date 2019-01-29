@@ -1,0 +1,29 @@
+apply plugin: "maven-publish"
+def nexusCurrent   = "https://nexus.isp.mobi/repository/isp-maven-releases"
+publishing {
+    repositories {
+        maven {
+            url nexusCurrent
+            credentials {
+                username '1'
+                password '2'
+            }
+        }
+    }
+    publications {
+        mavenJava(MavenPublication) {
+            // standard jar
+
+            artifactId = "isp-auth-service"
+
+            def artifactFile = file("${buildDir}/libs/${project.name}-${project.version}.jar")
+            println artifactFile
+            if (artifactFile.exists()){
+                artifact source: artifactFile
+            }
+        }
+    }
+}
+tasks.withType(PublishToMavenRepository) {
+    dependsOn assemble, test
+}

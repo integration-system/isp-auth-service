@@ -1,0 +1,12 @@
+auth-service:
+    build: .
+    container_name: auth-service
+    mem_limit: 2g
+    ports:
+      - 9000:5000
+      - 8401:8401
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf/nginx.conf
+      - ./build/libs/auth-service-0.1.0-SNAPSHOT.jar:/etc/nginx/libs/auth-service-0.1.0-SNAPSHOT.jar
+      - ./static:/etc/nginx/static/
+    restart: always
