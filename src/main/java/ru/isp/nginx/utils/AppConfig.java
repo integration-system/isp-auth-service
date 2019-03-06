@@ -26,7 +26,7 @@ public class AppConfig {
     private static final String ISP_CONVERTER_EVENT_NAME_PARAM = "isp.converter.event";
 
     public static String MDM_API_EVENT_NAME;
-    private static final String MDM_ADAPTER_EVENT_NAME_PARAM = "mdm.adapter.event";
+    private static final String MDM_API_EVENT_NAME_PARAM = "mdm.adapter.event";
 
     public static String MODULE_NAME;
     private static final String MODULE_NAME_PARAM = "module.name";
@@ -38,7 +38,7 @@ public class AppConfig {
         CONFIG_SERVICE_IP = params.get(CONFIG_SERVICE_IP_PARAM);
         INSTANCE_UUID = params.get(INSTANCE_UUID_PARAM);
         MODULE_NAME = params.get(MODULE_NAME_PARAM);
-        MDM_API_EVENT_NAME = params.get(MDM_ADAPTER_EVENT_NAME_PARAM);
+        MDM_API_EVENT_NAME = params.get(MDM_API_EVENT_NAME_PARAM);
         ISP_CONVERTER_EVENT_NAME = params.get(ISP_CONVERTER_EVENT_NAME_PARAM);
         if (MDM_API_EVENT_NAME != null && !MDM_API_EVENT_NAME.isEmpty()) {
             MDM_API_EVENT_NAME += EVENT_MODULE_CONNECT_SUFFIX;

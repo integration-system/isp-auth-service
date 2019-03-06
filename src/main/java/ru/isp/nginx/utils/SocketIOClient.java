@@ -145,7 +145,12 @@ public class SocketIOClient {
         }
         AppConfig.PROXY_MDM_ADDRESS = parseAddresses(String.valueOf(args[0]), "MDM").stream()
                 .map(Address::getAddress)
-                .map(addr -> "http://"+addr)
+                .map(addr -> {
+                    if (addr.startsWith("http://") || addr.startsWith("https://")) {
+                        return addr;
+                    }
+                    return "http://"+addr;
+                })
                 .collect(Collectors.toList());
     };
 
