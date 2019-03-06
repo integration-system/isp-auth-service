@@ -50,8 +50,8 @@ public class SocketIOClient {
             add(new Endpoint("/api"));
             add(new Endpoint("/files"));
         }};
-        if (Strings.isNotBlank(MDM_ADAPTER_EVENT_NAME)) {
-            requiredModules.add(MDM_ADAPTER_EVENT_NAME);
+        if (Strings.isNotBlank(MDM_API_EVENT_NAME)) {
+            requiredModules.add(MDM_API_EVENT_NAME);
             endpoints.add(new Endpoint("mdm/api"));
         }
         if (Strings.isNotBlank(ISP_CONVERTER_EVENT_NAME)) {
@@ -129,7 +129,7 @@ public class SocketIOClient {
         }
     };
 
-    private static final Emitter.Listener onMdmAdapterAddresses = args -> {
+    private static final Emitter.Listener onMdmApiAddresses = args -> {
         LOGGER.info("MDM ADAPTER ADDRESSES RECEIVED: {}", Arrays.asList(args));
         if (args.length == 0) {
             LOGGER.error(
@@ -143,8 +143,10 @@ public class SocketIOClient {
             Ack ack = (Ack) args[args.length - 1];
             ack.call();
         }
-        AppConfig.PROXY_MDM_ADDRESS = parseAddresses(String.valueOf(args[0]), "MDM")
-                .stream().map(Address::getAddress).collect(Collectors.toList());
+        AppConfig.PROXY_MDM_ADDRESS = parseAddresses(String.valueOf(args[0]), "MDM").stream()
+                .map(Address::getAddress)
+                .map(addr -> "http://"+addr)
+                .collect(Collectors.toList());
     };
 
     private static List<Address> parseAddresses(String addressJson, String type) {
@@ -182,11 +184,11 @@ public class SocketIOClient {
         socket.on(Socket.EVENT_DISCONNECT, args -> LOGGER.info("CONFIG SERVER DISCONNECTED, {}", args));
         socket.on(Socket.EVENT_CONNECTING, args -> LOGGER.info("CONFIG SERVER CONNECTING, {}", args));
         socket.on(Socket.EVENT_MESSAGE, args -> LOGGER.info("CONFIG SERVER MESSAGE, {}", args));
-        if (Strings.isNotBlank(MDM_ADAPTER_EVENT_NAME)) {
-            socket.on(MDM_ADAPTER_EVENT_NAME, onMdmAdapterAddresses);
-            LOGGER.info("MDM_ADAPTER_EVENT_NAME is: {}", MDM_ADAPTER_EVENT_NAME);
+        if (Strings.isNotBlank(MDM_API_EVENT_NAME)) {
+            socket.on(MDM_API_EVENT_NAME, onMdmApiAddresses);
+            LOGGER.info("MDM_API_EVENT_NAME is: {}", MDM_API_EVENT_NAME);
         } else {
-            LOGGER.info("MDM_ADAPTER_EVENT_NAME is empty");
+            LOGGER.info("MDM_API_EVENT_NAME is empty");
         }
         if (Strings.isNotBlank(ISP_CONVERTER_EVENT_NAME)) {
             socket.on(ISP_CONVERTER_EVENT_NAME, onReceivedConvertAddresses);
