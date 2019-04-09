@@ -5,7 +5,7 @@ plugins {
 apply from: 'publish.gradle'
 
 group 'ru.isp.nginx'
-version = new File('.version').getText('UTF-8').trim()
+version project.version
 archivesBaseName = 'auth-service'
 
 sourceCompatibility = 1.8
