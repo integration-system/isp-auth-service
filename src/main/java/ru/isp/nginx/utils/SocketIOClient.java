@@ -46,16 +46,18 @@ public class SocketIOClient {
 
     static {
         List<String> requiredModules = new ArrayList<>();
-        List<Endpoint> endpoints = new ArrayList<Endpoint>() {{
-            add(new Endpoint("/api"));
-            add(new Endpoint("/files"));
-        }};
+        List<Endpoint> endpoints = new ArrayList<>();
         if (Strings.isNotBlank(MDM_API_EVENT_NAME)) {
             requiredModules.add(MDM_API_EVENT_NAME);
             endpoints.add(new Endpoint("mdm/api"));
         }
         if (Strings.isNotBlank(ISP_CONVERTER_EVENT_NAME)) {
             requiredModules.add(ISP_CONVERTER_EVENT_NAME);
+            endpoints.add(new Endpoint("/api"));
+        }
+        if (Strings.isNotBlank(ISP_FILE_STORAGE_EVENT_NAME)) {
+            requiredModules.add(ISP_FILE_STORAGE_EVENT_NAME);
+            endpoints.add(new Endpoint("/files"));
         }
         requirements = new Requirements(requiredModules, false);
         moduleInfo = new ModuleInfo(
@@ -129,11 +131,11 @@ public class SocketIOClient {
         }
     };
 
-    private static final Emitter.Listener onMdmApiAddresses = args -> {
+    private static final Emitter.Listener onReceiveMdmApiAddresses = args -> {
         LOGGER.info("MDM ADAPTER ADDRESSES RECEIVED: {}", Arrays.asList(args));
         if (args.length == 0) {
             LOGGER.error(
-                    "Error, mdm adapter addresses has a wrong fields count, must be at least 1 but it is: {}",
+                    "Error, mdm api addresses has a wrong fields count, must be at least 1 but it is: {}",
                     args.length
             );
             return;
@@ -152,6 +154,27 @@ public class SocketIOClient {
                     return "http://"+addr;
                 })
                 .collect(Collectors.toList());
+    };
+
+    private static final Emitter.Listener onReceiveFSAddresses = args -> {
+        LOGGER.info("FILE STORAGE ADDRESSES RECEIVED: {}", Arrays.asList(args));
+        if (args.length == 0) {
+            LOGGER.error("Error, isp file-storage addresses has a wrong fields count, must be at least 1");
+            return;
+        }
+        if (args[args.length - 1] instanceof Ack) {
+            LOGGER.info("FILE STORAGE ADDRESSES RECEIVED ACK");
+            Ack ack = (Ack) args[args.length - 1];
+            ack.call();
+        }
+        PROXY_FILE_STORAGE_ADDRESS = parseAddresses(String.valueOf(args[0]), "MDM").stream()
+                .map(Address::getAddress)
+                .map(addr -> {
+                    if (addr.startsWith("http://") || addr.startsWith("https://")) {
+                        return addr;
+                    }
+                    return "http://"+addr;
+                }).collect(Collectors.toList());
     };
 
     private static List<Address> parseAddresses(String addressJson, String type) {
@@ -190,7 +213,7 @@ public class SocketIOClient {
         socket.on(Socket.EVENT_CONNECTING, args -> LOGGER.info("CONFIG SERVER CONNECTING, {}", args));
         socket.on(Socket.EVENT_MESSAGE, args -> LOGGER.info("CONFIG SERVER MESSAGE, {}", args));
         if (Strings.isNotBlank(MDM_API_EVENT_NAME)) {
-            socket.on(MDM_API_EVENT_NAME, onMdmApiAddresses);
+            socket.on(MDM_API_EVENT_NAME, onReceiveMdmApiAddresses);
             LOGGER.info("MDM_API_EVENT_NAME is: {}", MDM_API_EVENT_NAME);
         } else {
             LOGGER.info("MDM_API_EVENT_NAME is empty");
@@ -200,6 +223,12 @@ public class SocketIOClient {
             LOGGER.info("ISP_CONVERTER_EVENT_NAME is: {}", ISP_CONVERTER_EVENT_NAME);
         } else {
             LOGGER.error("ISP_CONVERTER_EVENT_NAME is empty");
+        }
+        if (Strings.isNotBlank(ISP_FILE_STORAGE_EVENT_NAME)) {
+            socket.on(ISP_FILE_STORAGE_EVENT_NAME, onReceiveFSAddresses);
+            LOGGER.info("ISP_FILE_STORAGE_EVENT_NAME is: {}", ISP_FILE_STORAGE_EVENT_NAME);
+        } else {
+            LOGGER.info("ISP_FILE_STORAGE_EVENT_NAME is empty");
         }
         socket.on(CONFIG_AFTER_CONNECTION, onReceivedConfig);
         socket.on(CONFIG_CHANGED, onReceivedConfig);

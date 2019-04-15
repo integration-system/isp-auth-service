@@ -13,6 +13,7 @@ public class AppConfig {
 
     public static List<String> PROXY_ADDRESS = new ArrayList<>();
     public static List<String> PROXY_MDM_ADDRESS = new ArrayList<>();
+    public static List<String> PROXY_FILE_STORAGE_ADDRESS = new ArrayList<>();
 
     public static String CONFIG_SERVICE_IP;
     public static String CONFIG_SERVICE_HOST;
@@ -28,6 +29,9 @@ public class AppConfig {
     public static String MDM_API_EVENT_NAME;
     private static final String MDM_API_EVENT_NAME_PARAM = "mdm.adapter.event";
 
+    public static String ISP_FILE_STORAGE_EVENT_NAME;
+    private static final String ISP_FILE_STORAGE_NAME_PARAM = "isp.file-storage.event";
+
     public static String MODULE_NAME;
     private static final String MODULE_NAME_PARAM = "module.name";
     private static final String EVENT_MODULE_CONNECT_SUFFIX = "_MODULE_CONNECTED";
@@ -40,11 +44,15 @@ public class AppConfig {
         MODULE_NAME = params.get(MODULE_NAME_PARAM);
         MDM_API_EVENT_NAME = params.get(MDM_API_EVENT_NAME_PARAM);
         ISP_CONVERTER_EVENT_NAME = params.get(ISP_CONVERTER_EVENT_NAME_PARAM);
-        if (MDM_API_EVENT_NAME != null && !MDM_API_EVENT_NAME.isEmpty()) {
+        ISP_FILE_STORAGE_EVENT_NAME = params.get(ISP_FILE_STORAGE_NAME_PARAM);
+        if (Strings.isNotBlank(MDM_API_EVENT_NAME)) {
             MDM_API_EVENT_NAME += EVENT_MODULE_CONNECT_SUFFIX;
         }
-        if (ISP_CONVERTER_EVENT_NAME != null && !ISP_CONVERTER_EVENT_NAME.isEmpty()) {
+        if (Strings.isNotBlank(ISP_CONVERTER_EVENT_NAME)) {
             ISP_CONVERTER_EVENT_NAME += EVENT_MODULE_CONNECT_SUFFIX;
+        }
+        if (Strings.isNotBlank(ISP_FILE_STORAGE_EVENT_NAME)) {
+            ISP_FILE_STORAGE_EVENT_NAME += EVENT_MODULE_CONNECT_SUFFIX;
         }
 
         if (Strings.isBlank(CONFIG_SERVICE_IP)) {
