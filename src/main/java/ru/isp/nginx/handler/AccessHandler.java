@@ -1,10 +1,8 @@
 package ru.isp.nginx.handler;
 
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jws;
-import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.impl.DefaultJwtParser;
 import nginx.clojure.java.ArrayMap;
-import nginx.clojure.java.Constants;
 import nginx.clojure.java.NginxJavaRequest;
 import nginx.clojure.java.NginxJavaRingHandler;
 import org.apache.logging.log4j.util.Strings;
@@ -16,9 +14,10 @@ import ru.isp.nginx.service.RedisService;
 import ru.isp.nginx.utils.AppConfig;
 import ru.isp.nginx.utils.RemoteConfig;
 
-import java.net.URI;
-import java.util.*;
-import java.util.stream.Stream;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 import static nginx.clojure.MiniConstants.*;
 import static nginx.clojure.java.Constants.PHASE_DONE;
@@ -118,7 +117,7 @@ public class AccessHandler implements NginxJavaRingHandler {
                     return UNAUTHORIZED_RESPONSE;
                 }
                 try {
-                    Claims claims = Jwts.parser()
+                    Claims claims = new DefaultJwtParser()
                             .setSigningKey(RemoteConfig.JWT_SECRET.getBytes())
                             .parseClaimsJws(adminToken)
                             .getBody();
