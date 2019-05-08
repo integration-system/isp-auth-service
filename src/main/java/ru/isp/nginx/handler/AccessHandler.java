@@ -126,7 +126,7 @@ public class AccessHandler implements NginxJavaRingHandler {
                         throw new RuntimeException("token expired");
                     }
                 } catch (Exception ex) {
-                    LOGGER.warn("received invalid admin token", ex);
+                    LOGGER.warn("received invalid admin token: {}", ex.getMessage());
                     return UNAUTHORIZED_RESPONSE;
                 }
             }
