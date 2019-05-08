@@ -1,5 +1,8 @@
 package ru.isp.nginx.handler;
 
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.Jwts;
 import nginx.clojure.java.ArrayMap;
 import nginx.clojure.java.Constants;
 import nginx.clojure.java.NginxJavaRequest;
@@ -7,12 +10,15 @@ import nginx.clojure.java.NginxJavaRingHandler;
 import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ru.isp.nginx.entity.Endpoint;
 import ru.isp.nginx.entity.RedisResponse;
 import ru.isp.nginx.service.RedisService;
 import ru.isp.nginx.utils.AppConfig;
 import ru.isp.nginx.utils.RemoteConfig;
 
-import java.util.Map;
+import java.net.URI;
+import java.util.*;
+import java.util.stream.Stream;
 
 import static nginx.clojure.MiniConstants.*;
 import static nginx.clojure.java.Constants.PHASE_DONE;
@@ -41,28 +47,28 @@ public class AccessHandler implements NginxJavaRingHandler {
             }
             // ===== CHECK APPLICATION TOKEN =====
             // There isn't required header with application token
-            Map<String, String> map = (Map<String, String>) request.get(HEADERS);
-            if (!map.containsKey(RemoteConfig.APPLICATION_TOKEN_HEADER)) {
+            Map<String, String> headers = (Map<String, String>) request.get(HEADERS);
+            if (!headers.containsKey(RemoteConfig.APPLICATION_TOKEN_HEADER)) {
                 return UNAUTHORIZED_RESPONSE;
             }
-            String applicationToken = map.get(RemoteConfig.APPLICATION_TOKEN_HEADER);
+            String applicationToken = headers.get(RemoteConfig.APPLICATION_TOKEN_HEADER);
             Map<String, String> applicationIdentities = RedisService
                     .getApplicationIdentities(getRedisKey(applicationToken, AppConfig.INSTANCE_UUID));
             // In redis doesn't exist record with received token
             if (applicationIdentities == null || applicationIdentities.isEmpty()) {
                 return UNAUTHORIZED_RESPONSE;
             }
-            // map.remove(RemoteConfig.APPLICATION_TOKEN_HEADER);
+            // headers.remove(RemoteConfig.APPLICATION_TOKEN_HEADER);
             // In record had received from redis don't exist all required fields with identities
             if (!setSystemIdentityHeaders(applicationIdentities, request)) {
                 return UNAUTHORIZED_RESPONSE;
             }
 
             String appIdentity = applicationIdentities.get(APPLICATION_IDENTITY_FIELD_IN_DB);
-            String uri = (String) request.get(Constants.URI);
-            String userToken = map.get(RemoteConfig.USER_TOKEN_HEADER);
+            String uri = request.uri();
+            String userToken = headers.get(RemoteConfig.USER_TOKEN_HEADER);
             String domainIdentity = applicationIdentities.get(DOMAIN_IDENTITY_FIELD_IN_DB);
-            String deviceToken = map.get(RemoteConfig.DEVICE_TOKEN_HEADER);
+            String deviceToken = headers.get(RemoteConfig.DEVICE_TOKEN_HEADER);
             String deviceIdentity = null;
             String userIdentity = null;
             RedisResponse permissions = RedisService.getPermissions(
@@ -72,7 +78,7 @@ public class AccessHandler implements NginxJavaRingHandler {
                     getRedisKey(deviceToken, domainIdentity)
             );
             //String applicationPermission = RedisService.getApplicationPermission(getRedisKey(appIdentity, uri));
-            // It is not permitted to call this method
+            // It is not permitted to call this methodParts
             String applicationPermission = permissions.getApplicationPermission().get();
             if (applicationPermission != null && applicationPermission.equals("0")) {
                 return UNAUTHORIZED_RESPONSE;
@@ -81,7 +87,7 @@ public class AccessHandler implements NginxJavaRingHandler {
             // ===== CHECK USER TOKEN =====
             if (!Strings.isBlank(userToken)) {
                 userIdentity = permissions.getUserIdentity().get();
-                // map.remove(RemoteConfig.USER_TOKEN_HEADER);
+                // headers.remove(RemoteConfig.USER_TOKEN_HEADER);
             }
             String userPermission = permissions.getUserPermission().get();
             if (Strings.isBlank(userIdentity) && userPermission != null && userPermission.equals("0")) {
@@ -93,7 +99,7 @@ public class AccessHandler implements NginxJavaRingHandler {
             // ===== CHECK DEVICE TOKEN =====
             if (!Strings.isBlank(deviceToken)) {
                 deviceIdentity = permissions.getDeviceIdentity().get();
-                // map.remove(RemoteConfig.DEVICE_TOKEN_HEADER);
+                // headers.remove(RemoteConfig.DEVICE_TOKEN_HEADER);
             }
             String devicePermission = permissions.getDevicePermission().get();
             if (Strings.isBlank(deviceIdentity) && devicePermission != null && devicePermission.equals("0")) {
@@ -101,6 +107,30 @@ public class AccessHandler implements NginxJavaRingHandler {
             }
             request.setVariable(NGINX_PARAM_DEVICE_IDENTITY_HEADER_VALUE,
                     deviceIdentity != null ? deviceIdentity : BLANK_IDENTITY_HEADER_VALUE);
+
+            String[] pathParts = new URI(uri).getPath().split("/");
+            List<String> methodParts = Arrays.asList(pathParts).subList(1, pathParts.length - 1);
+            String method = Strings.join(methodParts, '/');
+            Endpoint endpoint = AppConfig.ENDPOINTS_PATH_MAP.get(method);
+            if (endpoint != null && endpoint.isInner()) {
+                String adminToken = headers.get(RemoteConfig.ADMIN_TOKEN_HEADER);
+                if (Strings.isBlank(adminToken)) {
+                    return UNAUTHORIZED_RESPONSE;
+                }
+                try {
+                    Claims claims = Jwts.parser()
+                            .setSigningKey(RemoteConfig.JWT_SECRET.getBytes())
+                            .parseClaimsJws(adminToken)
+                            .getBody();
+                    Date expiration = claims.getExpiration();
+                    if (expiration != null && expiration.before(new Date())) {
+                        throw new RuntimeException("token expired");
+                    }
+                } catch (Exception ex) {
+                    LOGGER.warn("received invalid admin token", ex);
+                    return UNAUTHORIZED_RESPONSE;
+                }
+            }
         } catch (Exception e) {
             LOGGER.error("CHECK ACCESS ERROR: ", e);
         }

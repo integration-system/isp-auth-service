@@ -3,8 +3,10 @@ package ru.isp.nginx.utils;
 import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ru.isp.nginx.entity.Endpoint;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -14,6 +16,7 @@ public class AppConfig {
     public static List<String> PROXY_ADDRESS = new ArrayList<>();
     public static List<String> PROXY_MDM_ADDRESS = new ArrayList<>();
     public static List<String> PROXY_FILE_STORAGE_ADDRESS = new ArrayList<>();
+    public static Map<String, Endpoint> ENDPOINTS_PATH_MAP = new HashMap<>();
 
     public static String CONFIG_SERVICE_IP;
     public static String CONFIG_SERVICE_HOST;

@@ -3,17 +3,17 @@ package ru.isp.nginx.entity;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ModuleInfo {
+public class BackendDeclaration {
     private String moduleName;
     private String version;
     private String libVersion = "";
     private Address address;
     private List<Endpoint> endpoints = new ArrayList<>();
 
-    public ModuleInfo() {
+    public BackendDeclaration() {
     }
 
-    public ModuleInfo(String moduleName, String version, Address address, List<Endpoint> endpoints) {
+    public BackendDeclaration(String moduleName, String version, Address address, List<Endpoint> endpoints) {
         this.moduleName = moduleName;
         this.version = version;
         this.address = address;

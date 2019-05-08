@@ -25,6 +25,8 @@ public class RemoteConfig {
     public static String USER_TOKEN_HEADER;
     @Value("header.token.device")
     public static String DEVICE_TOKEN_HEADER;
+    @Value("header.admin.token")
+    public static String ADMIN_TOKEN_HEADER;
 
     @Value("header.identity.system")
     public static String SYSTEM_IDENTITY_HEADER;
@@ -38,6 +40,9 @@ public class RemoteConfig {
     public static String USER_IDENTITY_HEADER;
     @Value("header.identity.device")
     public static String DEVICE_IDENTITY_HEADER;
+
+    @Value("jwt.secret")
+    public static String JWT_SECRET;
 
     private static boolean configReceivedAndValid;
 

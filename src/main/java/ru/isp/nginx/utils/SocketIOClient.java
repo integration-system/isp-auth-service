@@ -12,7 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.isp.nginx.entity.Address;
 import ru.isp.nginx.entity.Endpoint;
-import ru.isp.nginx.entity.ModuleInfo;
+import ru.isp.nginx.entity.BackendDeclaration;
 import ru.isp.nginx.entity.Requirements;
 import ru.isp.nginx.service.RedisService;
 
@@ -36,12 +36,15 @@ public class SocketIOClient {
 
     private static final String SEND_MODULE_IS_READY = "MODULE:READY";
 
+    private static final String SEND_ROUTES_AFTER_CONNECT = "CONFIG:SEND_ROUTES_WHEN_CONNECTED";
+    private static final String SEND_ROUTES_CHANGES = "CONFIG:SEND_ROUTES_CHANGED";
+
     private static final String ERROR_CONNECTION = "ERROR_CONNECTION";
     private static ObjectMapper objectMapper = new ObjectMapper();
 
     private static boolean moduleIsReady = false;
 
-    private static ModuleInfo moduleInfo;
+    private static BackendDeclaration backendDeclaration;
     private static Requirements requirements;
 
     static {
@@ -59,8 +62,8 @@ public class SocketIOClient {
             requiredModules.add(ISP_FILE_STORAGE_EVENT_NAME);
             endpoints.add(new Endpoint("/files"));
         }
-        requirements = new Requirements(requiredModules, false);
-        moduleInfo = new ModuleInfo(
+        requirements = new Requirements(requiredModules, true);
+        backendDeclaration = new BackendDeclaration(
                 MODULE_NAME,
                 VERSION,
                 new Address(CONFIG_SERVICE_HOST, CONFIG_SERVICE_PORT),
@@ -71,7 +74,7 @@ public class SocketIOClient {
     private static final Emitter.Listener onReceivedConfig = args -> {
         LOGGER.info("CONFIG RECEIVED: {}", Arrays.asList(args));
         if (args.length == 0) {
-            LOGGER.error("Error, new config has a wrong fields count, must be at least 1 but it is: {}", args.length);
+            LOGGER.error("onReceivedConfig: empty payload");
             return;
         }
         try {
@@ -106,22 +109,15 @@ public class SocketIOClient {
     private static final Emitter.Listener onReceivedConvertAddresses = args -> {
         LOGGER.info("CONVERT ADDRESSES RECEIVED: {}", Arrays.asList(args));
         if (args.length == 0) {
-            LOGGER.error(
-                    "Error, isp converter addresses has a wrong fields count, must be at least 1 but it is: {}",
-                    args.length
-            );
+            LOGGER.error("onReceivedConvertAddresses: empty payload");
             return;
         }
-        if (args[args.length - 1] instanceof Ack) {
-            LOGGER.info("CONVERT ADDRESSES RECEIVED ACK");
-            Ack ack = (Ack) args[args.length - 1];
-            ack.call();
-        }
+
         AppConfig.PROXY_ADDRESS = parseAddresses(String.valueOf(args[0]), "CONVERTER")
                 .stream().map(Address::getAddress).collect(Collectors.toList());
         if (!AppConfig.PROXY_ADDRESS.isEmpty() && !moduleIsReady) {
             try {
-                String moduleInfoAsString = objectMapper.writeValueAsString(moduleInfo);
+                String moduleInfoAsString = objectMapper.writeValueAsString(backendDeclaration);
                 LOGGER.info("Send module info: {}", moduleInfoAsString);
                 socket.emit(SEND_MODULE_IS_READY, moduleInfoAsString);
                 moduleIsReady = true;
@@ -129,52 +125,79 @@ public class SocketIOClient {
                 LOGGER.error("Error occurred when send module info to config service", e);
             }
         }
+
+        if (args[args.length - 1] instanceof Ack) {
+            Ack ack = (Ack) args[args.length - 1];
+            ack.call();
+        }
     };
 
     private static final Emitter.Listener onReceiveMdmApiAddresses = args -> {
         LOGGER.info("MDM ADAPTER ADDRESSES RECEIVED: {}", Arrays.asList(args));
         if (args.length == 0) {
-            LOGGER.error(
-                    "Error, mdm api addresses has a wrong fields count, must be at least 1 but it is: {}",
-                    args.length
-            );
+            LOGGER.error("onReceiveMdmApiAddresses: empty payload");
             return;
         }
-        if (args[args.length - 1] instanceof Ack) {
-            LOGGER.info("MDM ADDRESSES RECEIVED ACK");
-            Ack ack = (Ack) args[args.length - 1];
-            ack.call();
-        }
+
         AppConfig.PROXY_MDM_ADDRESS = parseAddresses(String.valueOf(args[0]), "MDM").stream()
                 .map(Address::getAddress)
                 .map(addr -> {
                     if (addr.startsWith("http://") || addr.startsWith("https://")) {
                         return addr;
                     }
-                    return "http://"+addr;
+                    return "http://" + addr;
                 })
                 .collect(Collectors.toList());
+
+        if (args[args.length - 1] instanceof Ack) {
+            Ack ack = (Ack) args[args.length - 1];
+            ack.call();
+        }
     };
 
     private static final Emitter.Listener onReceiveFSAddresses = args -> {
         LOGGER.info("FILE STORAGE ADDRESSES RECEIVED: {}", Arrays.asList(args));
         if (args.length == 0) {
-            LOGGER.error("Error, isp file-storage addresses has a wrong fields count, must be at least 1");
+            LOGGER.error("onReceiveFSAddresses: empty payload");
             return;
         }
-        if (args[args.length - 1] instanceof Ack) {
-            LOGGER.info("FILE STORAGE ADDRESSES RECEIVED ACK");
-            Ack ack = (Ack) args[args.length - 1];
-            ack.call();
-        }
+
         PROXY_FILE_STORAGE_ADDRESS = parseAddresses(String.valueOf(args[0]), "MDM").stream()
                 .map(Address::getAddress)
                 .map(addr -> {
                     if (addr.startsWith("http://") || addr.startsWith("https://")) {
                         return addr;
                     }
-                    return "http://"+addr;
+                    return "http://" + addr;
                 }).collect(Collectors.toList());
+        if (args[args.length - 1] instanceof Ack) {
+            Ack ack = (Ack) args[args.length - 1];
+            ack.call();
+        }
+    };
+
+    private static final Emitter.Listener onReceiveBackends = args -> {
+        LOGGER.info("NEW ROUTES RECEIVED");
+        if (args.length == 0) {
+            LOGGER.error("onReceiveBackends: empty payload");
+            return;
+        }
+
+        TypeReference<List<BackendDeclaration>> type = new TypeReference<List<BackendDeclaration>>() {
+        };
+        try {
+            List<BackendDeclaration> list = objectMapper.readValue(String.valueOf(args[0]), type);
+            ENDPOINTS_PATH_MAP = list.stream()
+                    .flatMap(declaration -> declaration.getEndpoints().stream())
+                    .collect(Collectors.toMap(Endpoint::getPath, e -> e, (e1, e2) -> e1));
+        } catch (IOException e) {
+            LOGGER.error("Error occurred when routes was parsing", e);
+        }
+
+        if (args[args.length - 1] instanceof Ack) {
+            Ack ack = (Ack) args[args.length - 1];
+            ack.call();
+        }
     };
 
     private static List<Address> parseAddresses(String addressJson, String type) {
@@ -232,6 +255,8 @@ public class SocketIOClient {
         }
         socket.on(CONFIG_AFTER_CONNECTION, onReceivedConfig);
         socket.on(CONFIG_CHANGED, onReceivedConfig);
+        socket.on(SEND_ROUTES_AFTER_CONNECT, onReceiveBackends);
+        socket.on(SEND_ROUTES_CHANGES, onReceiveBackends);
         socket.on(ERROR_CONNECTION, args -> LOGGER.warn("ERROR SOCKET CONNECT: {}", Arrays.asList(args)));
         socket = socket.connect();
         LOGGER.info("SOCKET CONNECTED");
