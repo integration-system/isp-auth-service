@@ -108,8 +108,8 @@ public class AccessHandler implements NginxJavaRingHandler {
             request.setVariable(NGINX_PARAM_DEVICE_IDENTITY_HEADER_VALUE,
                     deviceIdentity != null ? deviceIdentity : BLANK_IDENTITY_HEADER_VALUE);
 
-            String[] pathParts = new URI(uri).getPath().split("/");
-            List<String> methodParts = Arrays.asList(pathParts).subList(1, pathParts.length - 1);
+            String[] pathParts = uri.split("/");
+            List<String> methodParts = Arrays.asList(pathParts).subList(2, pathParts.length);
             String method = Strings.join(methodParts, '/');
             Endpoint endpoint = AppConfig.ENDPOINTS_PATH_MAP.get(method);
             if (endpoint != null && endpoint.isInner()) {
