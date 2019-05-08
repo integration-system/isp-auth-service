@@ -25,7 +25,7 @@ public class RemoteConfig {
     public static String USER_TOKEN_HEADER;
     @Value("header.token.device")
     public static String DEVICE_TOKEN_HEADER;
-    @Value("header.admin.token")
+    @Value("header.token.admin")
     public static String ADMIN_TOKEN_HEADER;
 
     @Value("header.identity.system")
