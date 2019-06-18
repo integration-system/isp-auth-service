@@ -35,7 +35,7 @@ Service uses next technologies:
 ## Redis db
 A data in redis separeated a next way:
 The app uses first 6 dbs from 16 default once in redis.
-1. The first db with index `0` contains records with Map, where key is `APPLICATION_TOKEN` and values:
+1) The first db with index `0` contains records with Map, where key is `APPLICATION_TOKEN` and values:
  
 ```
     "1": "SYSTEM_IDENTITY_AS_A_STRING",
@@ -44,11 +44,16 @@ The app uses first 6 dbs from 16 default once in redis.
     "4": "APPLICATION_IDENTITY_AS_A_STRING",
 ```
 If the record doesn't exist, that means the token isn't valid.
-2. The second DB with index `1` contains records to determine whether it's allowed for this token call a method. For the token: "APPLICATION_IDENTITY_AS_A_STRING" and requested URL: "/api/userProfile/get/1" an allowed record will be: `APPLICATION_IDENTITY_AS_A_STRING|apiuserprofileget1: 1` and prohibit record is `APPLICATION_IDENTITY_AS_A_STRING|apiuserprofileget1: 0`. If the record with the key: "APPLICATION_IDENTITY_AS_A_STRING|apiuserprofileget1" absents that also means that the request is prohibited.
-3. The third DB has index `2` and contains `USER_TOKEN|DOMAIN_IDENTITY: USER_IDENTITY` for example: "5e386895-f934-4290-a6ca-d3d388d88af5|DOMAIN_IDENTITY_AS_A_STRING: USER_IDENTITY_AS_A_STRING". 
-4. The forth DB with index `3` contains only records like:  `apiuserprofileget1: 0`, what means that call method: /api/userProfile/get/1 without `USER_TOKEN` or with an invalid token is prohibited. A record like: `apiuserprofileget1: 1` doesn't have any sense because by default it's allowed to use any methods without USER_TOKEN.
-5. The fifth DB has index `4` and contains `DEVICE_TOKEN|DOMAIN_IDENTITY: DEVICE_IDENTITY` for example: "5e386895-f934-4290-a6ca-d3d388d88af5|DOMAIN_IDENTITY_AS_A_STRING: DEVICE_IDENTITY_AS_A_STRING". 
-6. The sixth and the last one DB with index `5` contains only records like:  `apiuserprofileget1: 0`, what means that call method: /api/userProfile/get/1 without `DEVICE_TOKEN` or with an invalid token is prohibited. A record like: `apiuserprofileget1: 1` doesn't have any sense because by default it's allowed to use any methods without DEVICE_TOKEN.
+
+2) The second DB with index `1` contains records to determine whether it's allowed for this token call a method. For the token: "APPLICATION_IDENTITY_AS_A_STRING" and requested URL: "/api/userProfile/get/1" an allowed record will be: `APPLICATION_IDENTITY_AS_A_STRING|apiuserprofileget1: 1` and prohibit record is `APPLICATION_IDENTITY_AS_A_STRING|apiuserprofileget1: 0`. If the record with the key: "APPLICATION_IDENTITY_AS_A_STRING|apiuserprofileget1" absents that also means that the request is prohibited.
+
+3) The third DB has index `2` and contains `USER_TOKEN|DOMAIN_IDENTITY: USER_IDENTITY` for example: "5e386895-f934-4290-a6ca-d3d388d88af5|DOMAIN_IDENTITY_AS_A_STRING: USER_IDENTITY_AS_A_STRING". 
+
+4) The forth DB with index `3` contains only records like:  `apiuserprofileget1: 0`, what means that call method: /api/userProfile/get/1 without `USER_TOKEN` or with an invalid token is prohibited. A record like: `apiuserprofileget1: 1` doesn't have any sense because by default it's allowed to use any methods without USER_TOKEN.
+
+5) The fifth DB has index `4` and contains `DEVICE_TOKEN|DOMAIN_IDENTITY: DEVICE_IDENTITY` for example: "5e386895-f934-4290-a6ca-d3d388d88af5|DOMAIN_IDENTITY_AS_A_STRING: DEVICE_IDENTITY_AS_A_STRING". 
+
+6) The sixth and the last one DB with index `5` contains only records like:  `apiuserprofileget1: 0`, what means that call method: /api/userProfile/get/1 without `DEVICE_TOKEN` or with an invalid token is prohibited. A record like: `apiuserprofileget1: 1` doesn't have any sense because by default it's allowed to use any methods without DEVICE_TOKEN.
 
 ## Remote config example
 ```json
